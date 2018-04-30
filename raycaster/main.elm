@@ -25,10 +25,13 @@ circle =
     pi * 2
 
 
-skyImage : String
-skyImage =
-    "assets/deathvalley_panorama.jpg"
+(skyImage, knifeHand) =
+    ("assets/deathvalley_panorama.jpg"
+    ,"assets/knife_hand.png"
+    )
 
+(knifeHandWidth, knifeHandHeight) =
+    (319, 320)
 
 
 -- MODEL
@@ -38,13 +41,16 @@ type alias Model =
     { camera : Camera
     , direction : Direction
     , sky : Sky
+    , paces : Float
     , pressedKeys : List Key
+    , pause : Bool
     }
 
 
 type alias Camera =
     { width : Float
     , height : Float
+    , scale : Float
     }
 
 
@@ -63,7 +69,9 @@ init =
     ( { pressedKeys = []
       , camera = initCamera (Window.Size 0 0)
       , direction = initDirection
+      , paces = 0
       , sky = initSky (Window.Size 0 0)
+      , pause = False
       }
     , Task.perform WindowSize Window.size
     )
@@ -73,6 +81,7 @@ initCamera : Window.Size -> Camera
 initCamera window =
     { width = toFloat window.width * 0.5
     , height = toFloat window.height * 0.5
+    , scale = (toFloat window.width *0.5 + toFloat window.height *0.5) / 1200
     }
 
 
@@ -109,6 +118,9 @@ update msg model =
 
         Tick delta ->
             let
+                pause = if (List.any ((==) Keys.Space) model.pressedKeys)
+                  then not model.pause
+                  else model.pause
                 arrows =
                     Keys.arrows model.pressedKeys
 
@@ -119,11 +131,26 @@ update msg model =
                         rotate model.direction (pi * Time.inSeconds delta)
                     else
                         model.direction
+                newPaces =
+                    if arrows.y == -1 then
+                         walk (-3 * Time.inSeconds delta)
+                    else if arrows.y == 1 then
+                         walk (3 * Time.inSeconds delta)
+                    else
+                        0
             in
-            ( { model | direction = newDirection }
+            ( { model | direction = newDirection, paces = model.paces + newPaces, pause = pause }
             , Cmd.none
             )
 
+
+walk : Float -> Float
+walk distance =
+     distance
+
+rotate : Float -> Direction -> Direction
+rotate angle direction =
+    direction + angle
 
 
 -- VIEW
@@ -131,11 +158,30 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    drawSky model.camera model.direction model.sky
+    div []
+    [ viewSky model.camera model.direction model.sky
+    , viewWeapon model.camera model.paces
+    ]
 
+viewWeapon : Camera ->  Float -> Html msg
+viewWeapon camera paces =
+    let
+        bobX = cos (paces * 2) * camera.scale * 6
+        bobY = sin (paces * 4) * camera.scale * 6
+    in div
+    [ style
+        [ ("position", "absolute")
+        , ("bottom", px (0 - bobY))
+        , ("right", px (0 - bobX))
+        , ("width", px (knifeHandWidth * camera.scale))
+        , ("height", px (knifeHandHeight * camera.scale))
+        , ("background-image", "url('" ++ knifeHand ++ "')")
+        , ("background-repeat", "no-repeat")
+        ]
+    ] []
 
-drawSky : Camera -> Direction -> Sky -> Html Msg
-drawSky camera direction sky =
+viewSky : Camera -> Direction -> Sky -> Html Msg
+viewSky camera direction sky =
     let
         width =
             sky.width * (camera.height / sky.height) * 2
@@ -163,18 +209,19 @@ px n =
     toString n ++ "px"
 
 
-rotate : Float -> Direction -> Direction
-rotate angle direction =
-    direction + angle
-
-
 
 -- SUBSCRIPTIONS
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
+    if model.pause then
+       Sub.batch
+        [ Sub.map KeyMsg Keys.subscriptions
+        , Window.resizes WindowSize
+        ]
+    else
+       Sub.batch
         [ Sub.map KeyMsg Keys.subscriptions
         , Window.resizes WindowSize
         , AnimationFrame.diffs Tick

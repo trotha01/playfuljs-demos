@@ -14138,15 +14138,18 @@ var _ohanhi$keyboard_extra$Keyboard_Extra$targetKey = A2(
 	_ohanhi$keyboard_extra$Keyboard_Extra$fromCode,
 	A2(_elm_lang$core$Json_Decode$field, 'keyCode', _elm_lang$core$Json_Decode$int));
 
-var _user$project$Main$rotate = F2(
-	function (angle, direction) {
-		return direction + angle;
-	});
 var _user$project$Main$px = function (n) {
 	return A2(
 		_elm_lang$core$Basics_ops['++'],
 		_elm_lang$core$Basics$toString(n),
 		'px');
+};
+var _user$project$Main$rotate = F2(
+	function (angle, direction) {
+		return direction + angle;
+	});
+var _user$project$Main$walk = function (distance) {
+	return distance;
 };
 var _user$project$Main$initSky = function (window) {
 	return {
@@ -14158,7 +14161,8 @@ var _user$project$Main$initDirection = 180;
 var _user$project$Main$initCamera = function (window) {
 	return {
 		width: _elm_lang$core$Basics$toFloat(window.width) * 0.5,
-		height: _elm_lang$core$Basics$toFloat(window.height) * 0.5
+		height: _elm_lang$core$Basics$toFloat(window.height) * 0.5,
+		scale: ((_elm_lang$core$Basics$toFloat(window.width) * 0.5) + (_elm_lang$core$Basics$toFloat(window.height) * 0.5)) / 1200
 	};
 };
 var _user$project$Main$update = F2(
@@ -14197,18 +14201,98 @@ var _user$project$Main$update = F2(
 					_user$project$Main$rotate,
 					model.direction,
 					_elm_lang$core$Basics$pi * _elm_lang$core$Time$inSeconds(_p2)) : model.direction);
+				var newPaces = _elm_lang$core$Native_Utils.eq(arrows.y, -1) ? _user$project$Main$walk(
+					-3 * _elm_lang$core$Time$inSeconds(_p2)) : (_elm_lang$core$Native_Utils.eq(arrows.y, 1) ? _user$project$Main$walk(
+					3 * _elm_lang$core$Time$inSeconds(_p2)) : 0);
+				var pause = A2(
+					_elm_lang$core$List$any,
+					F2(
+						function (x, y) {
+							return _elm_lang$core$Native_Utils.eq(x, y);
+						})(_ohanhi$keyboard_extra$Keyboard_Extra$Space),
+					model.pressedKeys) ? (!model.pause) : model.pause;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{direction: newDirection}),
+						{direction: newDirection, paces: model.paces + newPaces, pause: pause}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 		}
 	});
-var _user$project$Main$skyImage = 'assets/deathvalley_panorama.jpg';
+var _user$project$Main$_p3 = {ctor: '_Tuple2', _0: 319, _1: 320};
+var _user$project$Main$knifeHandWidth = _user$project$Main$_p3._0;
+var _user$project$Main$knifeHandHeight = _user$project$Main$_p3._1;
+var _user$project$Main$_p4 = {ctor: '_Tuple2', _0: 'assets/deathvalley_panorama.jpg', _1: 'assets/knife_hand.png'};
+var _user$project$Main$skyImage = _user$project$Main$_p4._0;
+var _user$project$Main$knifeHand = _user$project$Main$_p4._1;
+var _user$project$Main$viewWeapon = F2(
+	function (camera, paces) {
+		var bobY = (_elm_lang$core$Basics$sin(paces * 4) * camera.scale) * 6;
+		var bobX = (_elm_lang$core$Basics$cos(paces * 2) * camera.scale) * 6;
+		return A2(
+			_elm_lang$html$Html$div,
+			{
+				ctor: '::',
+				_0: _elm_lang$html$Html_Attributes$style(
+					{
+						ctor: '::',
+						_0: {ctor: '_Tuple2', _0: 'position', _1: 'absolute'},
+						_1: {
+							ctor: '::',
+							_0: {
+								ctor: '_Tuple2',
+								_0: 'bottom',
+								_1: _user$project$Main$px(0 - bobY)
+							},
+							_1: {
+								ctor: '::',
+								_0: {
+									ctor: '_Tuple2',
+									_0: 'right',
+									_1: _user$project$Main$px(0 - bobX)
+								},
+								_1: {
+									ctor: '::',
+									_0: {
+										ctor: '_Tuple2',
+										_0: 'width',
+										_1: _user$project$Main$px(_user$project$Main$knifeHandWidth * camera.scale)
+									},
+									_1: {
+										ctor: '::',
+										_0: {
+											ctor: '_Tuple2',
+											_0: 'height',
+											_1: _user$project$Main$px(_user$project$Main$knifeHandHeight * camera.scale)
+										},
+										_1: {
+											ctor: '::',
+											_0: {
+												ctor: '_Tuple2',
+												_0: 'background-image',
+												_1: A2(
+													_elm_lang$core$Basics_ops['++'],
+													'url(\'',
+													A2(_elm_lang$core$Basics_ops['++'], _user$project$Main$knifeHand, '\')'))
+											},
+											_1: {
+												ctor: '::',
+												_0: {ctor: '_Tuple2', _0: 'background-repeat', _1: 'no-repeat'},
+												_1: {ctor: '[]'}
+											}
+										}
+									}
+								}
+							}
+						}
+					}),
+				_1: {ctor: '[]'}
+			},
+			{ctor: '[]'});
+	});
 var _user$project$Main$circle = _elm_lang$core$Basics$pi * 2;
-var _user$project$Main$drawSky = F3(
+var _user$project$Main$viewSky = F3(
 	function (camera, direction, sky) {
 		var width = (sky.width * (camera.height / sky.height)) * 2;
 		var left = (direction / _user$project$Main$circle) * (0 - width);
@@ -14274,15 +14358,26 @@ var _user$project$Main$drawSky = F3(
 			{ctor: '[]'});
 	});
 var _user$project$Main$view = function (model) {
-	return A3(_user$project$Main$drawSky, model.camera, model.direction, model.sky);
+	return A2(
+		_elm_lang$html$Html$div,
+		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: A3(_user$project$Main$viewSky, model.camera, model.direction, model.sky),
+			_1: {
+				ctor: '::',
+				_0: A2(_user$project$Main$viewWeapon, model.camera, model.paces),
+				_1: {ctor: '[]'}
+			}
+		});
 };
-var _user$project$Main$Model = F4(
-	function (a, b, c, d) {
-		return {camera: a, direction: b, sky: c, pressedKeys: d};
+var _user$project$Main$Model = F6(
+	function (a, b, c, d, e, f) {
+		return {camera: a, direction: b, sky: c, paces: d, pressedKeys: e, pause: f};
 	});
-var _user$project$Main$Camera = F2(
-	function (a, b) {
-		return {width: a, height: b};
+var _user$project$Main$Camera = F3(
+	function (a, b, c) {
+		return {width: a, height: b, scale: c};
 	});
 var _user$project$Main$Sky = F2(
 	function (a, b) {
@@ -14304,13 +14399,24 @@ var _user$project$Main$init = {
 		camera: _user$project$Main$initCamera(
 			A2(_elm_lang$window$Window$Size, 0, 0)),
 		direction: _user$project$Main$initDirection,
+		paces: 0,
 		sky: _user$project$Main$initSky(
-			A2(_elm_lang$window$Window$Size, 0, 0))
+			A2(_elm_lang$window$Window$Size, 0, 0)),
+		pause: false
 	},
 	_1: A2(_elm_lang$core$Task$perform, _user$project$Main$WindowSize, _elm_lang$window$Window$size)
 };
 var _user$project$Main$subscriptions = function (model) {
-	return _elm_lang$core$Platform_Sub$batch(
+	return model.pause ? _elm_lang$core$Platform_Sub$batch(
+		{
+			ctor: '::',
+			_0: A2(_elm_lang$core$Platform_Sub$map, _user$project$Main$KeyMsg, _ohanhi$keyboard_extra$Keyboard_Extra$subscriptions),
+			_1: {
+				ctor: '::',
+				_0: _elm_lang$window$Window$resizes(_user$project$Main$WindowSize),
+				_1: {ctor: '[]'}
+			}
+		}) : _elm_lang$core$Platform_Sub$batch(
 		{
 			ctor: '::',
 			_0: A2(_elm_lang$core$Platform_Sub$map, _user$project$Main$KeyMsg, _ohanhi$keyboard_extra$Keyboard_Extra$subscriptions),
